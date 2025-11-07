@@ -38,14 +38,10 @@ docker-compose run --rm tts \
 
 ## 📖 Documentación Completa
 
-Para instrucciones detalladas, consulta la **[Guía de Instalación Completa](GUIA_INSTALACION.md)** que incluye:
+Para instrucciones detalladas, consulta:
 
-- ✅ Instalación paso a paso
-- ✅ Configuración de GPU RTX 5080
-- ✅ Ejemplos de uso
-- ✅ Solución de problemas
-- ✅ Scripts de Python
-- ✅ API del servidor
+- **[Guía de Instalación](GUIA_INSTALACION.md)** - Instalación paso a paso, configuración GPU, ejemplos
+- **[Aplicación Web y Streaming](APLICACION_WEB_Y_STREAMING.md)** - Servidor web, API REST, TTS en tiempo real
 
 ## 🔧 ¿Qué se actualizó?
 
@@ -69,8 +65,10 @@ Para instrucciones detalladas, consulta la **[Guía de Instalación Completa](GU
 - 🌍 Modelos pre-entrenados en español
 - ⚡ Optimizado para GPUs modernas
 - 🐳 Fácil despliegue con Docker
-- 🌐 API REST incluida
-- 💻 Interfaz web incluida
+- 🌐 **Servidor web con interfaz gráfica** incluido
+- 🔌 **API REST completa** para integración
+- ⚡ **TTS en tiempo real (streaming)** con XTTS v2
+- 💻 Interfaz web amigable lista para usar
 
 ## 📊 Rendimiento RTX 5080
 
