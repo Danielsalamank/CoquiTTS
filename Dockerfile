@@ -1,19 +1,58 @@
-ARG BASE=nvidia/cuda:11.8.0-base-ubuntu22.04
+# Dockerfile optimizado para RTX 5080 con CUDA 12.4
+ARG BASE=nvidia/cuda:12.4.0-runtime-ubuntu22.04
 FROM ${BASE}
 
-RUN apt-get update && apt-get upgrade -y
-RUN apt-get install -y --no-install-recommends gcc g++ make python3 python3-dev python3-pip python3-venv python3-wheel espeak-ng libsndfile1-dev && rm -rf /var/lib/apt/lists/*
+# Establecer variables de entorno para CUDA
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+
+# Evitar prompts interactivos durante la instalación
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Actualizar sistema e instalar dependencias
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    make \
+    python3.11 \
+    python3.11-dev \
+    python3-pip \
+    python3-venv \
+    python3-wheel \
+    espeak-ng \
+    libsndfile1-dev \
+    git \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Crear enlace simbólico para python
+RUN ln -sf /usr/bin/python3.11 /usr/bin/python
+
+# Actualizar pip
+RUN python -m pip install --upgrade pip setuptools wheel
+
+# Instalar PyTorch con soporte CUDA 12.4
+RUN pip3 install torch==2.3.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cu124
+
+# Instalar llvmlite primero
 RUN pip3 install llvmlite --ignore-installed
 
-# Install Dependencies:
-RUN pip3 install torch torchaudio --extra-index-url https://download.pytorch.org/whl/cu118
-RUN rm -rf /root/.cache/pip
+# Copiar archivos del repositorio
+WORKDIR /workspace/TTS
+COPY . /workspace/TTS
 
-# Copy TTS repository contents:
-WORKDIR /root
-COPY . /root
+# Instalar TTS y dependencias
+RUN pip3 install -e . && \
+    rm -rf /root/.cache/pip
 
-RUN make install
+# Crear directorio para modelos y datos
+RUN mkdir -p /workspace/models /workspace/output
 
+# Exponer puerto para servidor TTS
+EXPOSE 5002
+
+# Punto de entrada
 ENTRYPOINT ["tts"]
 CMD ["--help"]

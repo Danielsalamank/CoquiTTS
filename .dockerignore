@@ -1,9 +1,56 @@
+# Git
 .git/
+.gitignore
+.gitattributes
+
+# Docker
 Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Build
 build/
 dist/
 TTS.egg-info/
+*.egg-info/
+
+# Tests
 tests/outputs/*
 tests/train_outputs/*
+
+# Python
 __pycache__/
 *.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Modelos y datos pesados
+models/
+output/
+data/
+*.pth
+*.pt
+*.ckpt
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints
+
+# CI/CD
+.github/

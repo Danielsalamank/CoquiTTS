@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  tts:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: coqui-tts:latest
+    container_name: coqui-tts
+
+    # Configuración para GPU NVIDIA (RTX 5080)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # Variables de entorno
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+
+    # Volúmenes para persistencia
+    volumes:
+      - ./models:/workspace/models
+      - ./output:/workspace/output
+      - ./data:/workspace/data
+
+    # Puerto para el servidor TTS
+    ports:
+      - "5002:5002"
+
+    # Comando por defecto (puede sobrescribirse)
+    command: ["--help"]
+
+    # Reinicio automático
+    restart: unless-stopped
+
+  # Servicio para ejecutar el servidor TTS
+  tts-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: coqui-tts:latest
+    container_name: coqui-tts-server
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - CUDA_VISIBLE_DEVICES=0
+
+    volumes:
+      - ./models:/workspace/models
+      - ./output:/workspace/output
+      - ./data:/workspace/data
+
+    ports:
+      - "5002:5002"
+
+    # Iniciar el servidor TTS
+    entrypoint: ["tts-server"]
+    command: ["--host", "0.0.0.0", "--port", "5002"]
+
+    restart: unless-stopped
+
+networks:
+  default:
+    name: coqui-network
