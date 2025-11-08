@@ -70,7 +70,7 @@ services:
 
     # Iniciar el servidor TTS
     entrypoint: ["tts-server"]
-    command: ["--host", "0.0.0.0", "--port", "5002"]
+    command: ["--port", "5002"]
 
     restart: unless-stopped
 

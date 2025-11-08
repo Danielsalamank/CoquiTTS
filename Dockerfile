@@ -33,8 +33,10 @@ RUN ln -sf /usr/bin/python3.11 /usr/bin/python
 # Actualizar pip
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Instalar PyTorch con soporte CUDA 12.4
-RUN pip3 install torch==2.3.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cu124
+# Instalar PyTorch con soporte CUDA 12.4 (versiones disponibles en cu124)
+# Se actualiza a una versión compatible ya que 2.3.0 no está disponible en cu124
+RUN pip3 install --index-url https://download.pytorch.org/whl/cu124 \
+    torch==2.5.1+cu124 torchaudio==2.5.1+cu124
 
 # Instalar llvmlite primero
 RUN pip3 install llvmlite --ignore-installed
