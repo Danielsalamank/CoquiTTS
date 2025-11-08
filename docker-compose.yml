@@ -22,6 +22,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - CUDA_VISIBLE_DEVICES=0
+      - COQUI_TOS_AGREED=1
 
     # Volúmenes para persistencia
     volumes:
@@ -31,7 +32,7 @@ services:
 
     # Puerto para el servidor TTS
     ports:
-      - "5002:5002"
+      - "8001:5002"
 
     # Comando por defecto (puede sobrescribirse)
     command: ["--help"]
@@ -59,6 +60,8 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - CUDA_VISIBLE_DEVICES=0
+      - COQUI_TOS_AGREED=1
+      - TTS_HOME=/workspace/models
 
     volumes:
       - ./models:/workspace/models
@@ -66,11 +69,11 @@ services:
       - ./data:/workspace/data
 
     ports:
-      - "5002:5002"
+      - "8001:5002"
 
     # Iniciar el servidor TTS
     entrypoint: ["tts-server"]
-    command: ["--port", "5002"]
+    command: ["--port", "5002", "--model_name", "tts_models/multilingual/multi-dataset/xtts_v2"]
 
     restart: unless-stopped
 

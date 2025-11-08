@@ -417,6 +417,11 @@ class ModelManager(object):
             model not in ["tortoise-v2", "bark"] and "fairseq" not in model_name and "xtts" not in model_name
         ):  # TODO:This is stupid but don't care for now.
             output_model_path, output_config_path = self._find_files(output_path)
+        # XTTS models ship with config.json at the root; ensure we set it
+        if "xtts" in model_name:
+            cfg = os.path.join(output_path, "config.json")
+            if os.path.isfile(cfg):
+                output_config_path = cfg
         # update paths in the config.json
         self._update_paths(output_path, output_config_path)
         return output_model_path, output_config_path, model_item

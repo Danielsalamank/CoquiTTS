@@ -8,7 +8,7 @@
     <meta name="description" content="🐸Coqui AI TTS demo server.">
     <meta name="author" content="🐸Coqui AI TTS">
 
-    <title>TTS engine</title>
+    <title>Motor TTS</title>
 
     <!-- Bootstrap core CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css"
@@ -69,31 +69,36 @@
                     type="text" name="style_wav">
                 {%endif%}
 
-                <input id="text" placeholder="Type here..." size=45 type="text" name="text">
-                <button id="speak-button" name="speak">Speak</button><br /><br />
+                <textarea id="text" placeholder="Escribe aquí..." rows="5" cols="60" name="text"></textarea>
+                <button id="speak-button" name="speak">Hablar</button><br /><br />
 
-                {%if use_multi_speaker%}
-                Choose a speaker:
-                <select id="speaker_id" name=speaker_id method="GET" action="/">
-                    {% for speaker_id in speaker_ids %}
-                    <option value="{{speaker_id}}" SELECTED>{{speaker_id}}</option>"
-                    {% endfor %}
-                </select><br /><br />
-                {%endif%}
+                Selecciona el idioma:
+                <select id="language_id" name="language_id" method="GET" action="/"></select><br /><br />
 
-                {%if use_multi_language%}
-                Choose a language:
-                <select id="language_id" name=language_id method="GET" action="/">
-                    {% for language_id in language_ids %}
-                    <option value="{{language_id}}" SELECTED>{{language_id}}</option>"
-                    {% endfor %}
-                </select><br /><br />
-                {%endif%}
+                Selecciona la voz:
+                <select id="speaker_id" name="speaker_id" method="GET" action="/"></select><br /><br />
+
+                <!-- Clonar voz (XTTS requiere speaker_wav) -->
+                <div class="mt-3" style="text-align:left; display:inline-block">
+                    <h5>Clonar voz</h5>
+                    <p class="small">Para modelos XTTS/multilingual, sube una muestra WAV del hablante o proporciona una URL accesible desde el servidor.</p>
+                    <div class="form-group">
+                        <label for="speaker_wav_file">Subir muestra (.wav)</label>
+                        <input id="speaker_wav_file" type="file" accept="audio/wav" class="form-control-file" />
+                        <button id="upload-speaker-wav" class="btn btn-sm btn-primary mt-2">Cargar muestra</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="speaker_wav_url">o URL de audio de referencia</label>
+                        <input id="speaker_wav_url" type="text" placeholder="https://.../voice.wav" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <input id="speaker_wav_path" type="text" readonly class="form-control" placeholder="Ruta cargada en servidor" />
+                    </div>
+                </div>
 
 
                 {%if show_details%}
-                <button id="details-button" onclick="location.href = 'details'" name="model-details">Model
-                    Details</button><br /><br />
+                <button id="details-button" onclick="location.href = 'details'" name="model-details">Detalles del modelo</button><br /><br />
                 {%endif%}
                 <audio id="audio" controls autoplay hidden></audio>
                 <p id="message"></p>
@@ -112,30 +117,71 @@
         }
         function q(selector) { return document.querySelector(selector) }
         q('#text').focus()
+        async function loadLanguages() {
+            try {
+                const res = await fetch('/api/languages');
+                const data = await res.json();
+                const langSel = q('#language_id');
+                langSel.innerHTML = '';
+                (data.languages || []).forEach(l => {
+                    const opt = document.createElement('option');
+                    opt.value = l.id || l; opt.textContent = l.label || l; langSel.appendChild(opt);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadVoices(language) {
+            try {
+                const res = await fetch('/api/voices' + (language ? `?language=${encodeURIComponent(language)}` : ''));
+                const data = await res.json();
+                const spkSel = q('#speaker_id');
+                spkSel.innerHTML = '';
+                (data.voices || []).forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v.id || v; opt.textContent = v.label || v; spkSel.appendChild(opt);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        q('#language_id').addEventListener('change', (e) => loadVoices(e.target.value));
+        // Cargar idiomas y luego voces del primer idioma disponible
+        loadLanguages().then(() => {
+            const initialLang = q('#language_id').value;
+            loadVoices(initialLang);
+        });
+
+        let uploadedSpeakerWavPath = ''
+
         function do_tts(e) {
             const text = q('#text').value
-            const speaker_id = getTextValue('#speaker_id')
+            let speaker_id = getTextValue('#speaker_id')
             const style_wav = getTextValue('#style_wav')
-            const language_id = getTextValue('#language_id')
+            let language_id = getTextValue('#language_id')
+            // speaker_wav: usar ruta cargada o URL manual
+            let speaker_wav = uploadedSpeakerWavPath || getTextValue('#speaker_wav_url')
+            // Si los selects no tienen opciones, evitamos enviar valores vacíos que rompan modelos single-voice/single-language
+            const spkSel = q('#speaker_id');
+            const langSel = q('#language_id');
+            if (!spkSel || spkSel.options.length === 0) speaker_id = ''
+            if (!langSel || langSel.options.length === 0) language_id = ''
             if (text) {
                 q('#message').textContent = 'Synthesizing...'
                 q('#speak-button').disabled = true
                 q('#audio').hidden = true
-                synthesize(text, speaker_id, style_wav, language_id)
+                synthesize(text, speaker_id, style_wav, language_id, speaker_wav)
             }
             e.preventDefault()
             return false
         }
         q('#speak-button').addEventListener('click', do_tts)
-        q('#text').addEventListener('keyup', function (e) {
-            if (e.keyCode == 13) { // enter
-                do_tts(e)
-            }
-        })
-        function synthesize(text, speaker_id = "", style_wav = "", language_id = "") {
-            fetch(`/api/tts?text=${encodeURIComponent(text)}&speaker_id=${encodeURIComponent(speaker_id)}&style_wav=${encodeURIComponent(style_wav)}&language_id=${encodeURIComponent(language_id)}`, { cache: 'no-cache' })
+        // Con textarea no enviamos con Enter para permitir múltiples líneas
+        function synthesize(text, speaker_id = "", style_wav = "", language_id = "", speaker_wav = "") {
+            const url = `/api/tts?text=${encodeURIComponent(text)}&speaker_id=${encodeURIComponent(speaker_id)}&style_wav=${encodeURIComponent(style_wav)}&language_id=${encodeURIComponent(language_id)}&speaker_wav=${encodeURIComponent(speaker_wav)}`
+            fetch(url, { cache: 'no-cache' })
                 .then(function (res) {
-                    if (!res.ok) throw Error(res.statusText)
+                    if (!res.ok) {
+                        return res.text().then(t => { throw Error(t || res.statusText) })
+                    }
                     return res.blob()
                 }).then(function (blob) {
                     q('#message').textContent = ''
@@ -143,10 +189,37 @@
                     q('#audio').src = URL.createObjectURL(blob)
                     q('#audio').hidden = false
                 }).catch(function (err) {
-                    q('#message').textContent = 'Error: ' + err.message
+                    // intentar mostrar mensaje JSON si viene del backend
+                    try {
+                        const j = JSON.parse(err.message)
+                        q('#message').textContent = 'Error: ' + (j.error || err.message)
+                    } catch (_) {
+                        q('#message').textContent = 'Error: ' + err.message
+                    }
                     q('#speak-button').disabled = false
                 })
         }
+
+        // Upload de muestra de voz para clonar
+        q('#upload-speaker-wav').addEventListener('click', async (e) => {
+            e.preventDefault()
+            const f = q('#speaker_wav_file').files && q('#speaker_wav_file').files[0]
+            if (!f) { q('#message').textContent = 'Seleccione un archivo .wav primero'; return }
+            q('#message').textContent = 'Subiendo muestra...'
+            const fd = new FormData()
+            fd.append('speaker_wav', f)
+            try {
+                const res = await fetch('/api/train/upload', { method: 'POST', body: fd })
+                const data = await res.json()
+                if (!res.ok) throw Error(data.error || res.statusText)
+                const saved = (data.saved || [])[0]
+                uploadedSpeakerWavPath = saved || ''
+                q('#speaker_wav_path').value = uploadedSpeakerWavPath
+                q('#message').textContent = 'Muestra cargada: ' + (uploadedSpeakerWavPath || '(ruta no disponible)')
+            } catch (err) {
+                q('#message').textContent = 'Error al subir: ' + err.message
+            }
+        })
     </script>
 
 </body>

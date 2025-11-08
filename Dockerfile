@@ -41,6 +41,9 @@ RUN pip3 install --index-url https://download.pytorch.org/whl/cu124 \
 # Instalar llvmlite primero
 RUN pip3 install llvmlite --ignore-installed
 
+# Fijar versión compatible de transformers para XTTS
+RUN pip3 install "transformers==4.41.2"
+
 # Copiar archivos del repositorio
 WORKDIR /workspace/TTS
 COPY . /workspace/TTS
